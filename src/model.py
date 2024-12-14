@@ -1,7 +1,7 @@
 from huggingface_hub import snapshot_download
 
 # Ruta para almacenar el modelo
-local_dir = "D:/Documentos/Code/MIA_project/models/llama_models/Llama-3.2-3B-Instruct"
+local_dir = "models/llama_models/Llama-3.2-3B-Instruct"
 model_name = "meta-llama/Llama-3.2-3B-Instruct"
 
 print(f"Descargando el modelo {model_name}...")
