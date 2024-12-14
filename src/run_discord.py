@@ -10,7 +10,7 @@ CHANNEL_NAME = 'mia'
 bot = commands.Bot(command_prefix='!', intents=discord.Intents.all())
 
 # Ruta del modelo
-MODEL_PATH = "D:/Documentos/Code/MIA_project/models/fine_tuned/qlora-personality"
+MODEL_PATH = "models/fine_tuned/qlora-personality"
 
 # Definir personalidad de MIA
 PERSONALITY_BASE = (
