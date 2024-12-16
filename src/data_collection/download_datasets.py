@@ -5,9 +5,8 @@ def download_datasets():
     Descarga los datasets seleccionados desde Hugging Face y los guarda en la carpeta correspondiente.
     """
     datasets = {
-        "big_spanish": "Kukedlc/Big-Spanish-1.2M",
-        "spanish_jokes": "mrm8488/CHISTES_spanish_jokes",
-        "spanish_roleplay": "Kukedlc/spanish-roleplay-4.5k"
+        "Coloquial": "JL2132131231/Ananas",
+        
     }
     
     for name, path in datasets.items():
@@ -21,7 +20,7 @@ if __name__ == "__main__":
     from datasets import load_dataset
 
     # Cargar el dataset desde Hugging Face
-    dataset_name = "Kukedlc/spanish-roleplay-4.5k"
+    dataset_name = "JL2132131231/Ananas"
     print(f"Cargando el dataset {dataset_name}...")
     dataset = load_dataset(dataset_name)
 
@@ -32,3 +31,5 @@ if __name__ == "__main__":
     # Mostrar las primeras entradas del dataset
     print("\nPrimeras entradas:")
     print(dataset["train"][0])  # Cambiar "train" si hay otros splits
+
+    download_datasets()

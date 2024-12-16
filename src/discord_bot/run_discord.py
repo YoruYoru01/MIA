@@ -1,6 +1,6 @@
 import discord
 from discord.ext import commands
-from handler_1 import generate_response, load_model_and_tokenizer
+from handler_3 import load_model_and_pipeline, generate_response
 
 # Configuración del bot
 TOKEN = 'MTI5NTA2OTk0NzEwOTcwNzg4OQ.GpQgcE.yqnvFPBRCeJZaDFdik66rsTZqPyINJC7be4zxw'
@@ -10,15 +10,15 @@ CHANNEL_NAME = 'mia'
 bot = commands.Bot(command_prefix='!', intents=discord.Intents.all())
 
 # Ruta del modelo
-MODEL_PATH = "models/fine_tuned/qlora-personality"
+MODEL_PATH = "models/fine_tuned/qlora-personality-4"
 
 # Definir personalidad de MIA
 PERSONALITY_BASE = (
-    ""
+    "Tus respuestas reflejaran el alma de una chica joven; Eres amigable, burlona, malhablada e ironica  "
 )
 
-# Cargar modelo y tokenizador
-tokenizer, model = load_model_and_tokenizer(MODEL_PATH)
+# Cargar el modelo y pipeline
+text_generator = load_model_and_pipeline(MODEL_PATH)
 
 # Historial en memoria por usuario
 user_histories = {}
@@ -43,20 +43,20 @@ async def on_message(message):
 
         # Obtener historial del usuario o crear uno nuevo
         user_history = user_histories.get(user_id, [])
-        
+
+        # Generar respuesta usando el pipeline
         response = generate_response(
-            prompt, model, tokenizer,
+            prompt, text_generator,
             personality_base=PERSONALITY_BASE
         )
 
-        # Filtra caracteres especiales o emojis problemáticos
+        # Filtrar caracteres especiales o emojis problemáticos
         response = ''.join(c for c in response if c.isprintable())
 
-        # Limpia caracteres no estándar
+        # Limpiar caracteres no estándar
         response = response.encode('utf-8', 'ignore').decode('utf-8')
 
         # Actualizar historial del usuario
-        
         user_history.append({"user": message.author.name, "input": prompt, "response": response})
         user_histories[user_id] = user_history[-50:]  # Limitar a las últimas 50 interacciones por usuario
 

@@ -13,16 +13,10 @@ def load_model_and_tokenizer(model_path):
     return tokenizer, model
 
 # Generar respuesta desde el modelo
-def generate_response(prompt, model, tokenizer, personality_base=None, max_new_tokens=250, temperature=0.8, top_p=0.85):
-    """
-    Genera una respuesta basada en el prompt. Añade personalidad.
-    """
-    if personality_base:
-        base_prompt = f"{personality_base}\n\n"
-    else:
-        base_prompt = ""
+def generate_response(prompt, model, tokenizer, max_new_tokens=150, temperature=0.7, top_p=0.9):
 
-    full_prompt = f"{base_prompt}Usuario: {prompt}\nMIA:"
+
+    full_prompt = f"Usuario: {prompt}\nMIA:"
 
     # Tokenización y generación
     inputs = tokenizer(full_prompt, return_tensors="pt").to("cuda")
@@ -42,6 +36,8 @@ def generate_response(prompt, model, tokenizer, personality_base=None, max_new_t
     if "Usuario:" in response or "MIA:" in response:
         response = response.split("Usuario:")[-1].strip()
         response = response.split("MIA:")[-1].strip()
+        response = response.split("Respuesta:")[-1].strip()
+        response = response.split("Contexto:")[-1].strip()
 
     # Postprocesamiento: Filtrar respuestas repetidas
     response_lines = response.split("\n")
