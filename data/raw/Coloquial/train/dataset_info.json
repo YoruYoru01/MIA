@@ -1,0 +1,46 @@
+{
+  "builder_name": "json",
+  "citation": "",
+  "config_name": "default",
+  "dataset_name": "ananas",
+  "dataset_size": 8364302,
+  "description": "",
+  "download_checksums": {
+    "hf://datasets/JL2132131231/Ananas@b079fcba1f3387898dc63665cadf2e7b8ebd35e0/Ananas.json": {
+      "num_bytes": 10823080,
+      "checksum": null
+    }
+  },
+  "download_size": 10823080,
+  "features": {
+    "input": {
+      "dtype": "string",
+      "_type": "Value"
+    },
+    "instruction": {
+      "dtype": "string",
+      "_type": "Value"
+    },
+    "output": {
+      "dtype": "string",
+      "_type": "Value"
+    }
+  },
+  "homepage": "",
+  "license": "",
+  "size_in_bytes": 19187382,
+  "splits": {
+    "train": {
+      "name": "train",
+      "num_bytes": 8364302,
+      "num_examples": 41342,
+      "dataset_name": "ananas"
+    }
+  },
+  "version": {
+    "version_str": "0.0.0",
+    "major": 0,
+    "minor": 0,
+    "patch": 0
+  }
+}

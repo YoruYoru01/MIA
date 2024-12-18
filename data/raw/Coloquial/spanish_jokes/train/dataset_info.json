@@ -1,0 +1,54 @@
+{
+  "builder_name": "parquet",
+  "citation": "",
+  "config_name": "default",
+  "dataset_name": "chistes_spanish_jokes",
+  "dataset_size": 815423,
+  "description": "",
+  "download_checksums": {
+    "hf://datasets/mrm8488/CHISTES_spanish_jokes@965dc8b6a47349e0494941396c23a8b66e7be2ee/data/train-00000-of-00001-b70fa6139e8c3f32.parquet": {
+      "num_bytes": 504749,
+      "checksum": null
+    }
+  },
+  "download_size": 504749,
+  "features": {
+    "id": {
+      "dtype": "int64",
+      "_type": "Value"
+    },
+    "text": {
+      "dtype": "string",
+      "_type": "Value"
+    },
+    "keywords": {
+      "dtype": "string",
+      "_type": "Value"
+    },
+    "funny": {
+      "dtype": "int64",
+      "_type": "Value"
+    },
+    "category": {
+      "dtype": "string",
+      "_type": "Value"
+    }
+  },
+  "homepage": "",
+  "license": "",
+  "size_in_bytes": 1320172,
+  "splits": {
+    "train": {
+      "name": "train",
+      "num_bytes": 815423,
+      "num_examples": 2419,
+      "dataset_name": "chistes_spanish_jokes"
+    }
+  },
+  "version": {
+    "version_str": "0.0.0",
+    "major": 0,
+    "minor": 0,
+    "patch": 0
+  }
+}
