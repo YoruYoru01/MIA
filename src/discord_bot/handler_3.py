@@ -25,7 +25,7 @@ def load_model_and_pipeline(model_path):
     print("Pipeline de generación de texto creado.")
     return text_generator
 
-def generate_response(prompt, pipeline, personality_base=None, max_new_tokens=200, temperature=0.5, top_p=0.7):
+def generate_response(prompt, pipeline, personality_base=None, max_new_tokens=200, temperature=0.3, top_p=0.7):
     if personality_base:
         full_prompt = f"{personality_base}\nUsuario: {prompt}\n<|startofresponse|>"
     else:

@@ -1,14 +1,26 @@
-import discord
+import faiss
+import pickle
 from transformers import pipeline, AutoTokenizer, AutoModelForCausalLM, BitsAndBytesConfig
 import torch
+from sentence_transformers import SentenceTransformer
 import tempfile
 import os
 import subprocess
 import whisper
-from discord import FFmpegPCMAudio
-from discord.opus import Encoder
 import asyncio
 
+from discord import FFmpegPCMAudio
+
+
+# Configurar FAISS
+print("Cargando índice FAISS y datos procesados...")
+index = faiss.read_index("data/processed/Faiss/vtuber_index.faiss")
+with open("data/processed/Faiss/vtuber_data.pkl", "rb") as f:
+    df = pickle.load(f)
+embedding_model = SentenceTransformer("all-MiniLM-L6-v2")
+print("Índice y datos cargados correctamente.")
+
+# Función para cargar el modelo y pipeline
 def load_model_and_pipeline(model_path):
     print(f"Cargando el modelo desde {model_path}...")
     quantization_config = BitsAndBytesConfig(
@@ -31,33 +43,78 @@ def load_model_and_pipeline(model_path):
     print("Pipeline de generación de texto creado.")
     return text_generator
 
-def generate_response(prompt, pipeline, personality_base=None, max_new_tokens=200, temperature=0.5, top_p=0.7):
-    if personality_base:
-        full_prompt = f"{personality_base}\nUsuario: {prompt}\n<|startofresponse|>"
-    else:
-        full_prompt = f"Usuario: {prompt}\n<|startofresponse|>"
+# Función para buscar fragmentos relevantes en FAISS
+def query_vtubers(question, top_k=3):
+    print("\nProcesando consulta en FAISS...")
+    question_embedding = embedding_model.encode([question]).astype('float32')
+    distances, indices = index.search(question_embedding, top_k)
 
-    generated_text = pipeline(
-        full_prompt,
-        max_new_tokens=max_new_tokens,
-        temperature=temperature,
-        top_p=top_p,
-        repetition_penalty=1.2,  # Penalizar repeticiones
-        do_sample=True,
-        pad_token_id=pipeline.tokenizer.pad_token_id
-    )
+    retrieved_docs = []
+    for idx in indices[0]:
+        if idx != -1:
+            fragment = df.iloc[idx]['fragment']
+            retrieved_docs.append(fragment)
+    return retrieved_docs
+
+# Generar respuesta combinando FAISS y modelo de lenguaje
+def generate_response(prompt, pipeline, personality_base=None, max_new_tokens=200, temperature=0.3, top_p=0.7, top_k=3):
+    # Recuperar fragmentos relevantes usando FAISS
+    print("\nDEBUG: Procesando consulta en FAISS...")
+    retrieved_docs = []
+    try:
+        question_embedding = embedding_model.encode([prompt]).astype('float32')
+        distances, indices = index.search(question_embedding, top_k)
+
+        for idx, dist in zip(indices[0], distances[0]):
+            if idx != -1:
+                fragment = df.iloc[idx]['fragment']
+                print(f"DEBUG: Fragmento recuperado (índice: {idx}, distancia: {dist}): {fragment[:100]}...")
+                retrieved_docs.append(fragment)
+    except Exception as e:
+        print(f"ERROR en FAISS: {e}")
+
+    # Crear contexto combinado
+    if retrieved_docs:
+        combined_context = "\n\n".join(retrieved_docs)
+        prompt_with_context = f"Context:\n{combined_context}\n\nQuestion: {prompt}\nAnswer:"
+        print(f"\nDEBUG: Contexto combinado:\n{combined_context[:300]}...\n")  # Mostrar solo los primeros 300 caracteres
+    else:
+        print("\nDEBUG: No se encontraron fragmentos relevantes en FAISS.")
+        prompt_with_context = prompt
+
+    # Generar respuesta usando el modelo
+    if personality_base:
+        full_prompt = f"{personality_base}\n{prompt_with_context}\n<|startofresponse|>"
+    else:
+        full_prompt = f"{prompt_with_context}\n<|startofresponse|>"
+
+    print(f"\nDEBUG: Prompt completo enviado al modelo:\n{full_prompt[:300]}...\n")  # Mostrar los primeros 300 caracteres
+
+    try:
+        generated_text = pipeline(
+            full_prompt,
+            max_new_tokens=max_new_tokens,
+            temperature=temperature,
+            top_p=top_p,
+            repetition_penalty=1.2,  # Penalizar repeticiones
+            do_sample=True,
+            pad_token_id=pipeline.tokenizer.pad_token_id
+        )
+    except Exception as e:
+        print(f"ERROR al generar texto: {e}")
+        return "Lo siento, no pude generar una respuesta en este momento."
 
     response = generated_text[0]["generated_text"].replace(full_prompt, "").strip()
 
     # Eliminar fragmentos redundantes
-    unwanted_phrases = ["Usuario:", "MIA:", "Respuesta:", "Contexto:"]
+    unwanted_phrases = ["Usuario:", "MIA:", "Respuesta:", "Contexto:", "Context:"]
     for phrase in unwanted_phrases:
         response = response.split(phrase)[-1].strip()
 
     response_lines = response.split("\n")
     clean_response = "\n".join(sorted(set(response_lines), key=response_lines.index))
 
-    print("Respuesta completa generada por el modelo:", response)
+    print("\nDEBUG: Respuesta generada por el modelo:\n", clean_response)
     return clean_response
 
 
