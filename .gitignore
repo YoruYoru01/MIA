@@ -1,0 +1,7 @@
+secrets.json
+secrets.txt
+data/
+src/__pycache__/
+.git/
+.venv/
+prompts.txt
