@@ -1,0 +1,20 @@
+{
+  "name": "mia-vrm-viewer",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+    "dev": "vite",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "dependencies": {
+    "@pixiv/three-vrm": "^3.3.2",
+    "three": "^0.171.0"
+  },
+  "devDependencies": {
+    "vite": "^6.0.6"
+  }
+}
