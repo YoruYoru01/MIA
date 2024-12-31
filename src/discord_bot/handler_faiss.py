@@ -5,11 +5,8 @@ import torch
 from sentence_transformers import SentenceTransformer
 import tempfile
 import os
-import subprocess
-import whisper
-import asyncio
+from gtts import gTTS
 
-from discord import FFmpegPCMAudio
 
 
 # Configurar FAISS
@@ -56,10 +53,11 @@ def query_vtubers(question, top_k=3):
             retrieved_docs.append(fragment)
     return retrieved_docs
 
-# Generar respuesta combinando FAISS y modelo de lenguaje
-def generate_response(prompt, pipeline, personality_base=None, max_new_tokens=200, temperature=0.3, top_p=0.7, top_k=3):
-    # Recuperar fragmentos relevantes usando FAISS
-    print("\nDEBUG: Procesando consulta en FAISS...")
+def generate_response(prompt, pipeline, personality_base=None, max_new_tokens=150, temperature=0.6, top_p=0.85, top_k=3):
+    """
+    Genera una respuesta combinando el contexto recuperado con FAISS y la generación del modelo.
+    """
+    print("\nDEBUG: Generando respuesta para el prompt...")
     retrieved_docs = []
     try:
         question_embedding = embedding_model.encode([prompt]).astype('float32')
@@ -75,104 +73,56 @@ def generate_response(prompt, pipeline, personality_base=None, max_new_tokens=20
 
     # Crear contexto combinado
     if retrieved_docs:
-        combined_context = "\n\n".join(retrieved_docs)
-        prompt_with_context = f"Context:\n{combined_context}\n\nQuestion: {prompt}\nAnswer:"
-        print(f"\nDEBUG: Contexto combinado:\n{combined_context[:300]}...\n")  # Mostrar solo los primeros 300 caracteres
+        combined_context = "\n".join(retrieved_docs[:top_k])
+        prompt_with_context = f"Contexto:\n{combined_context}\n\nUsuario: {prompt}\nMIA:"
+        print(f"DEBUG: Contexto agregado:\n{combined_context[:300]}...")
     else:
-        print("\nDEBUG: No se encontraron fragmentos relevantes en FAISS.")
-        prompt_with_context = prompt
+        prompt_with_context = f"Usuario: {prompt}\nMIA:"
+        print("DEBUG: Sin contexto relevante recuperado de FAISS.")
+
+    # Construir el prompt completo
+    if personality_base:
+        full_prompt = f"{personality_base}\n\n{prompt_with_context}"
+    else:
+        full_prompt = prompt_with_context
+
+    print(f"DEBUG: Prompt completo:\n{full_prompt[:300]}...")
 
     # Generar respuesta usando el modelo
-    if personality_base:
-        full_prompt = f"{personality_base}\n{prompt_with_context}\n<|startofresponse|>"
-    else:
-        full_prompt = f"{prompt_with_context}\n<|startofresponse|>"
-
-    print(f"\nDEBUG: Prompt completo enviado al modelo:\n{full_prompt[:300]}...\n")  # Mostrar los primeros 300 caracteres
-
     try:
         generated_text = pipeline(
             full_prompt,
             max_new_tokens=max_new_tokens,
             temperature=temperature,
             top_p=top_p,
-            repetition_penalty=1.2,  # Penalizar repeticiones
-            do_sample=True,
-            pad_token_id=pipeline.tokenizer.pad_token_id
+            repetition_penalty=1.2,  # Evitar repeticiones
+            pad_token_id=pipeline.tokenizer.pad_token_id,
+            do_sample=True
         )
+        response = generated_text[0]["generated_text"].replace(full_prompt, "").strip()
     except Exception as e:
         print(f"ERROR al generar texto: {e}")
         return "Lo siento, no pude generar una respuesta en este momento."
 
-    response = generated_text[0]["generated_text"].replace(full_prompt, "").strip()
-
-    # Eliminar fragmentos redundantes
-    unwanted_phrases = ["Usuario:", "MIA:", "Respuesta:", "Contexto:", "Context:"]
+    # Filtrar contenido redundante o no estándar
+    unwanted_phrases = ["Usuario:", "MIA:", "Respuesta:", "Contexto:"]
     for phrase in unwanted_phrases:
         response = response.split(phrase)[-1].strip()
 
     response_lines = response.split("\n")
     clean_response = "\n".join(sorted(set(response_lines), key=response_lines.index))
 
-    print("\nDEBUG: Respuesta generada por el modelo:\n", clean_response)
+    print(f"DEBUG: Respuesta final generada:\n{clean_response}")
     return clean_response
 
-
-def transcribir_audio(audio_path):
-    """Transcribe el audio usando Whisper."""
-    print(f"Transcribiendo audio desde: {audio_path}")
-    model = whisper.load_model("base")
-    result = model.transcribe(audio_path, language="es")
-    texto_transcrito = result['text']
-    print(f"Texto transcrito: {texto_transcrito}")
-    return texto_transcrito
-
-async def procesar_audio_y_responder(voice_client, text_generator, personality_base):
-    """Captura audio del canal de voz, lo transcribe y genera una respuesta."""
+def reproducir_audio(texto):
+    """Convierte texto a audio y lo reproduce en el sistema."""
+    
     try:
-        while voice_client.is_connected():
-            with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as temp_audio:
-                temp_audio_path = temp_audio.name
-
-            # Capturar el audio con ffmpeg
-            process = subprocess.Popen(
-                [
-                    "ffmpeg", "-y", "-f", "s16le", "-ar", "48000", "-ac", "2", "-i",
-                    "pipe:0", temp_audio_path
-                ],
-                stdin=subprocess.PIPE
-            )
-
-            await asyncio.sleep(5)  # Captura un segmento de 5 segundos
-            process.stdin.close()
-            process.wait()
-
-            # Procesar el audio con Whisper
-            if os.path.exists(temp_audio_path):
-                texto = transcribir_audio(temp_audio_path)
-                os.remove(temp_audio_path)
-
-                if texto:
-                    print(f"Texto capturado: {texto}")
-                    # Generar respuesta
-                    respuesta = generate_response(texto, text_generator, personality_base=personality_base)
-                    print(f"Respuesta generada: {respuesta}")
-                    # Reproducir respuesta en el canal
-                    await reproducir_audio(voice_client, respuesta)
+        with tempfile.NamedTemporaryFile(suffix=".mp3", delete=False) as temp_audio:
+            tts = gTTS(text=texto, lang="es")
+            tts.save(temp_audio.name)
+            temp_audio_path = temp_audio.name
+        os.system(f"start {temp_audio_path}")
     except Exception as e:
-        print(f"Error procesando audio y generando respuesta: {e}")
-
-async def reproducir_audio(voice_client, texto):
-    """Convierte texto en audio y lo reproduce en el canal de voz."""
-    from gtts import gTTS
-    print(f"Convirtiendo texto a audio: {texto}")
-    with tempfile.NamedTemporaryFile(suffix=".mp3", delete=False) as temp_audio:
-        tts = gTTS(text=texto, lang="es")
-        tts.save(temp_audio.name)
-        temp_audio_path = temp_audio.name
-
-    audio_source = FFmpegPCMAudio(temp_audio_path)
-    voice_client.play(audio_source, after=lambda e: os.remove(temp_audio_path))
-
-    while voice_client.is_playing():
-        await asyncio.sleep(1)
+        print(f"Error al reproducir audio: {e}")
