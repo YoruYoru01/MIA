@@ -5,3 +5,5 @@ src/__pycache__/
 .git/
 .venv/
 prompts.txt
+mia-vrm-viewer/models
+mia-vrm-viewer/node_modules
