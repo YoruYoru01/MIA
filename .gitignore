@@ -7,3 +7,4 @@ src/__pycache__/
 prompts.txt
 mia-vrm-viewer/models
 mia-vrm-viewer/node_modules
+src/bad-apple-bot/
